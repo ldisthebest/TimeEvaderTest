@@ -1237,13 +1237,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50effa1f968e34abca1c48e9ebeba4f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gravity: -40
+  gravity: -80
   runSpeed: 10
   groundDamping: 20
   inAirDamping: 20
   minJumpHeight: 3
-  maxJumpHeight: 6
-  maxJumpOrderTime: 0.5
+  JumpDrag: 2.5
   dashMaxTimes: 1
   normalDash:
     dashSpeed: 30

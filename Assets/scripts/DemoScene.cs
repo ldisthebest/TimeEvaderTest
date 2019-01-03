@@ -21,18 +21,18 @@ class Dash
 public class DemoScene : MonoBehaviour
 {
 	// movement config
-	public float gravity = -25f;
+    [Range(-100,0)]
+	public float gravity = -80f;
 	public float runSpeed = 8f;
+
+
     
 	public float groundDamping = 20f; // how fast do we change direction? higher means faster
 	public float inAirDamping = 5f;
 	public float minJumpHeight = 3f;
-    public float maxJumpHeight = 6f;
-    public float maxJumpOrderTime = 1f;
+    [Range(1,5)]
+    public float JumpDrag = 2.5f;
 
-    float currentJumpOrderTime = 0f;
-    bool canJump;
-    bool hasJump;
 
     KeyCode upKey = KeyCode.UpArrow;
     KeyCode downKey = KeyCode.DownArrow;
@@ -92,8 +92,6 @@ public class DemoScene : MonoBehaviour
 	void Awake()
 	{
         //_animator = GetComponent<Animator>();
-        canJump = true;
-        hasJump = false;
         currentDash = normalDash;
         _controller = GetComponent<CharacterController2D>();
 
@@ -209,32 +207,21 @@ public class DemoScene : MonoBehaviour
 
        
 
-        if ( _controller.isGrounded && Input.GetKey( jumpKey ))
+        if (Input.GetKey( jumpKey ))
 		{
-            if(Input.GetKeyDown(jumpKey))
+            if (_velocity.y >= 0 && !_controller.isGrounded)
             {
-                canJump = true;
-            }
-            if(canJump)
-            {
-                currentJumpOrderTime += Time.deltaTime;
-                if (currentJumpOrderTime >= maxJumpOrderTime)
-                {
-                    Jump(maxJumpHeight);
-                    canJump = false;
-                }
+                _velocity.y -= gravity / JumpDrag * Time.deltaTime;
             }
 
+            if (_controller.isGrounded && Input.GetKeyDown(jumpKey))
+            {
+                _velocity.y = Mathf.Sqrt(2f * minJumpHeight * -gravity);
+                //canJump = false;
+            }
+           
+            
         }
-
-        if (Input.GetKeyUp(jumpKey) && _controller.isGrounded && currentJumpOrderTime != 0)
-        {
-            float jumpHeight = currentJumpOrderTime / maxJumpOrderTime * maxJumpHeight;
-            jumpHeight = jumpHeight < minJumpHeight ? minJumpHeight : jumpHeight;
-            Jump(jumpHeight);
-        }
-
-
 
 
         // apply gravity before moving
@@ -290,7 +277,6 @@ public class DemoScene : MonoBehaviour
 
     void Jump(float jumpHeight)
     {
-        currentJumpOrderTime = 0;
         _velocity.y = Mathf.Sqrt(2f * jumpHeight * -gravity);
     }
 
