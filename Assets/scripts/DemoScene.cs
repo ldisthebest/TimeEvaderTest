@@ -418,4 +418,15 @@ public class DemoScene : MonoBehaviour
         bullet.Init(dashDirection);
         //Game
     }
+
+    void Die()
+    {
+        gameObject.SetActive(false);
+    }
+
+    void Relive(Vector3 relivePos)
+    {
+        transform.position = relivePos;
+        gameObject.SetActive(true);
+    }
 }
