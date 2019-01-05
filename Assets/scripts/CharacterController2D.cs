@@ -120,7 +120,6 @@ public class CharacterController2D : MonoBehaviour
 	/// <value>The jumping threshold.</value>
 	public float jumpingThreshold = 0.07f;
 
-
 	/// <summary>
 	/// curve for multiplying speed based on slope (negative = down slope and positive = up slope)
 	/// </summary>
@@ -130,8 +129,8 @@ public class CharacterController2D : MonoBehaviour
 	public int totalHorizontalRays = 8;
 	[Range( 2, 20 )]
 	public int totalVerticalRays = 4;
-
-
+    [Range(0, 1)]
+    public float fetchDistance = 0.3f;
 	/// <summary>
 	/// this is used to calculate the downward ray that is cast to check for slopes. We use the somewhat arbitrary value 75 degrees
 	/// to calculate the length of the ray that checks for slopes.
@@ -575,6 +574,51 @@ public class CharacterController2D : MonoBehaviour
 			}
 		}
 	}
+
+        public Transform CarrayThings()
+        {
+            Vector2 towards = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+            Vector2 towardsOrigin = _raycastOrigins.bottomRight;
+            Vector2 backOrigin = _raycastOrigins.bottomLeft;
+            if(towards == Vector2.left)
+            {
+                towardsOrigin = _raycastOrigins.bottomLeft;
+                backOrigin = _raycastOrigins.bottomRight;
+            }
+            RaycastHit2D towardsFetch = Physics2D.Raycast(towardsOrigin + Vector2.up * 0.2f, towards,fetchDistance,~LayerMask.GetMask("Player"));
+            RaycastHit2D backFecth = Physics2D.Raycast(backOrigin + Vector2.up * 0.2f, towards * -1, fetchDistance, ~LayerMask.GetMask("Player"));
+            if(towardsFetch)
+            {
+                return TryFetch(towardsFetch);
+            }
+            else if(backFecth)
+            {
+                return TryFetch(backFecth);
+            }
+            return null;
+        }
+
+        Transform TryFetch(RaycastHit2D hit)
+        {
+            Transform hitTransform = hit.transform;
+            if(hitTransform.gameObject.CompareTag("Fetchable"))
+            {
+                var bounds = hit.collider.bounds;
+                Vector3 fetchPos = new Vector3(transform.position.x,(bounds.max.y - bounds.min.y)/2 + _raycastOrigins.topLeft.y);
+                hitTransform.position = fetchPos;
+                hitTransform.parent = transform;
+                hitTransform.gameObject.layer = 2;
+                return hitTransform;
+            }
+            return null;
+        }
+
+        public void ThrowThings(Transform things)
+        {
+            things.parent = null;
+            things.gameObject.layer = platformMask>>1;
+            //给个力扔出去
+        }
 
 	#endregion
 

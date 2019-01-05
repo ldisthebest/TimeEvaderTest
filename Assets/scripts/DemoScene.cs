@@ -87,7 +87,7 @@ public class DemoScene : MonoBehaviour
 
     bool readyShot = false;
 
-
+    Transform fetchedThings;
 
 	void Awake()
 	{
@@ -134,11 +134,24 @@ public class DemoScene : MonoBehaviour
 	// the Update loop contains a very simple example of moving the character around and controlling the animation
 	void Update()
 	{
+        if(Input.GetKeyDown(KeyCode.Q))
+        {
+            if(fetchedThings == null)
+            {
+                fetchedThings = _controller.CarrayThings();
+            }
+            else
+            {
+                _controller.ThrowThings(fetchedThings);
+            }
+        }
+
         if(Input.GetKeyDown(KeyCode.Space))
         {
             BeginPauseState();
             SetArrowPos(rightArrow);
         }
+
 
         if(pauseState)
         {
@@ -147,7 +160,7 @@ public class DemoScene : MonoBehaviour
 
         if(dashState)
         {
-            Dash(currentDash);
+            Dash();
             return;
         }
         else if(bounceOnWallState)
@@ -265,7 +278,7 @@ public class DemoScene : MonoBehaviour
                 readyShot = false;
                 CurrentFrame = 0;
                 Shot();
-                return;
+                //return;
             }
         }
 
@@ -291,25 +304,26 @@ public class DemoScene : MonoBehaviour
         dashState = true;
         _velocity = dashDirection * normalDash.dashSpeed;
         currentDash = normalDash;
+        Dash();
     }
 
 
-    void Dash(Dash dashProperty)
+    void Dash()
     {
         Vector3 dashDelta = _velocity * Time.deltaTime;
         _controller.move(dashDelta);
 
         hasDashDistance += Vector3.Magnitude(dashDelta);
 
-        if (hasDashDistance >= dashProperty.dashMaxDistance)
+        if (hasDashDistance >= currentDash.dashMaxDistance)
         {
             if (_velocity.y > 0)
             {
-                _velocity.y = -dashProperty.upDashDamping * gravity * Time.deltaTime;
+                _velocity.y = -currentDash.upDashDamping * gravity * Time.deltaTime;
             }
             else if (_velocity.y < 0)
             {
-                _velocity.y = dashProperty.downDashDamping * gravity * Time.deltaTime;
+                _velocity.y = currentDash.downDashDamping * gravity * Time.deltaTime;
             }
 
             hasDashDistance = 0;
