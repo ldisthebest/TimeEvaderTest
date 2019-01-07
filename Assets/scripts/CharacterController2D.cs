@@ -18,6 +18,12 @@ public class CharacterController2D : MonoBehaviour
 		public Vector3 bottomLeft;
 	}
 
+    struct CircleRaycastOrgins
+    {
+        public Vector2 center;
+        public float radius;
+    }
+
 	public class CharacterCollisionState2D
 	{
 		public bool right;
@@ -49,6 +55,8 @@ public class CharacterController2D : MonoBehaviour
 			                     right, left, above, below, movingDownSlope, slopeAngle, wasGroundedLastFrame, becameGroundedThisFrame );
 		}
 	}
+
+    //struct 
 
 	#endregion
 
@@ -142,10 +150,17 @@ public class CharacterController2D : MonoBehaviour
 	public new Transform transform;
 	[HideInInspector][NonSerialized]
 	public BoxCollider2D boxCollider;
-	//[HideInInspector][NonSerialized]
-	//public Rigidbody2D rigidBody2D;
 
-	[HideInInspector][NonSerialized]
+    [HideInInspector][NonSerialized]
+    public BoxCollider2D boxFetched;
+
+    [HideInInspector][NonSerialized]
+    public CircleCollider2D circleFetched;
+
+        //[HideInInspector][NonSerialized]
+        //public Rigidbody2D rigidBody2D;
+
+    [HideInInspector][NonSerialized]
 	public CharacterCollisionState2D collisionState = new CharacterCollisionState2D();
 	[HideInInspector][NonSerialized]
 	public Vector3 velocity;
@@ -161,10 +176,14 @@ public class CharacterController2D : MonoBehaviour
 	/// </summary>
 	CharacterRaycastOrigins _raycastOrigins;
 
-	/// <summary>
-	/// stores our raycast hit during movement
-	/// </summary>
-	RaycastHit2D _raycastHit;
+    CharacterRaycastOrigins boxCastOrigins;
+
+    CircleRaycastOrgins circleCastOrigins;
+
+    /// <summary>
+    /// stores our raycast hit during movement
+    /// </summary>
+    RaycastHit2D _raycastHit;
 
 	/// <summary>
 	/// stores any raycast hits that occur this frame. we have to store them in case we get a hit moving
@@ -352,6 +371,21 @@ public class CharacterController2D : MonoBehaviour
 		_raycastOrigins.topLeft = new Vector2( modifiedBounds.min.x, modifiedBounds.max.y );
 		_raycastOrigins.bottomRight = new Vector2( modifiedBounds.max.x, modifiedBounds.min.y );
 		_raycastOrigins.bottomLeft = modifiedBounds.min;
+
+        //更新搬运的物体的collider
+        if(boxFetched)
+        {
+            var bounds = boxFetched.bounds;
+            boxCastOrigins.bottomLeft = new Vector2(bounds.min.x, bounds.min.y);
+            boxCastOrigins.bottomRight = new Vector2(bounds.max.x, bounds.min.y);
+            boxCastOrigins.topLeft = new Vector2(bounds.min.x,bounds.max.y);
+        }
+        else if(circleFetched)
+        {
+            var bounds = circleFetched.bounds;
+            circleCastOrigins.center = bounds.center;
+            circleCastOrigins.radius = bounds.extents.x;
+        }
 	}
 
 
@@ -368,9 +402,39 @@ public class CharacterController2D : MonoBehaviour
 		var rayDirection = isGoingRight ? Vector2.right : -Vector2.right;
 		var initialRayOrigin = isGoingRight ? _raycastOrigins.bottomRight : _raycastOrigins.bottomLeft;
 
-		for( var i = 0; i < totalHorizontalRays; i++ )
+
+        Vector2 fetchedThingInitialOrigin = Vector2.zero;
+        int extraRays = 0;
+        if(boxFetched)
+        {
+            extraRays = totalHorizontalRays; 
+            fetchedThingInitialOrigin = isGoingRight ? boxCastOrigins.bottomRight : boxCastOrigins.bottomLeft;
+        }
+        else if(circleFetched)
+        {
+            extraRays = 7;
+        }
+
+		for( var i = 0; i < totalHorizontalRays + extraRays; i++ )
 		{
-			var ray = new Vector2( initialRayOrigin.x, initialRayOrigin.y + i * _verticalDistanceBetweenRays );
+            var ray = Vector2.zero; ;
+            if(i < totalHorizontalRays)
+            {
+                ray = new Vector2(initialRayOrigin.x, initialRayOrigin.y + i * _verticalDistanceBetweenRays);
+            }
+            else
+            {
+                if(boxFetched)
+                {
+                    ray = new Vector2(fetchedThingInitialOrigin.x, fetchedThingInitialOrigin.y + (i - totalHorizontalRays) * _verticalDistanceBetweenRays);
+                }
+                else
+                {
+                    float angle = Mathf.PI/(extraRays - 1) * (i - totalHorizontalRays);
+                    ray = circleCastOrigins.center + new Vector2(circleCastOrigins.radius * Mathf.Sin(angle)*rayDirection.x, -circleCastOrigins.radius * Mathf.Cos(angle));
+                }
+            }
+			
 
 			DrawRay( ray, rayDirection * rayDistance, Color.red );
 
@@ -418,6 +482,7 @@ public class CharacterController2D : MonoBehaviour
 			}
 		}
 	}
+
 
 
 	/// <summary>
@@ -496,9 +561,40 @@ public class CharacterController2D : MonoBehaviour
 		if( ( isGoingUp && !collisionState.wasGroundedLastFrame ) || ignoreOneWayPlatformsThisFrame )
 			mask &= ~oneWayPlatformMask;
 
-		for( var i = 0; i < totalVerticalRays; i++ )
+        int extraRays = 0;
+        if(isGoingUp)
+        {
+            if(boxFetched)
+            {
+                extraRays = totalVerticalRays;
+            }
+            else if(circleFetched)
+            {
+                extraRays = 7;
+            }
+        }
+
+
+		for( var i = 0; i < totalVerticalRays + extraRays; i++ )
 		{
-			var ray = new Vector2( initialRayOrigin.x + i * _horizontalDistanceBetweenRays, initialRayOrigin.y );
+            var ray = Vector2.zero;
+            if(isGoingUp && i >= totalVerticalRays)
+            {
+                if(boxFetched)
+                {
+                    ray = new Vector2(boxCastOrigins.topLeft.x + (i - totalVerticalRays) * _horizontalDistanceBetweenRays, boxCastOrigins.topLeft.y);
+                }
+                else
+                {
+                    float angle = Mathf.PI / (extraRays - 1) * (i - totalVerticalRays);
+                    ray = circleCastOrigins.center + new Vector2(circleCastOrigins.radius * Mathf.Cos(angle), circleCastOrigins.radius * Mathf.Sin(angle));
+                }
+            }
+            else
+            {
+                ray = new Vector2(initialRayOrigin.x + i * _horizontalDistanceBetweenRays, initialRayOrigin.y);
+            }
+			
 
 			DrawRay( ray, rayDirection * rayDistance, Color.red );
 			_raycastHit = Physics2D.Raycast( ray, rayDirection, rayDistance, mask );
@@ -575,50 +671,63 @@ public class CharacterController2D : MonoBehaviour
 		}
 	}
 
-        public Transform CarrayThings()
+    public Transform CarrayThings()
+    {
+        Vector2 towards = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+        Vector2 towardsOrigin = _raycastOrigins.bottomRight;
+        Vector2 backOrigin = _raycastOrigins.bottomLeft;
+        if(towards == Vector2.left)
         {
-            Vector2 towards = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
-            Vector2 towardsOrigin = _raycastOrigins.bottomRight;
-            Vector2 backOrigin = _raycastOrigins.bottomLeft;
-            if(towards == Vector2.left)
-            {
-                towardsOrigin = _raycastOrigins.bottomLeft;
-                backOrigin = _raycastOrigins.bottomRight;
-            }
-            RaycastHit2D towardsFetch = Physics2D.Raycast(towardsOrigin + Vector2.up * 0.2f, towards,fetchDistance,~LayerMask.GetMask("Player"));
-            RaycastHit2D backFecth = Physics2D.Raycast(backOrigin + Vector2.up * 0.2f, towards * -1, fetchDistance, ~LayerMask.GetMask("Player"));
-            if(towardsFetch)
-            {
-                return TryFetch(towardsFetch);
-            }
-            else if(backFecth)
-            {
-                return TryFetch(backFecth);
-            }
-            return null;
+            towardsOrigin = _raycastOrigins.bottomLeft;
+            backOrigin = _raycastOrigins.bottomRight;
         }
-
-        Transform TryFetch(RaycastHit2D hit)
+        RaycastHit2D towardsFetch = Physics2D.Raycast(towardsOrigin + Vector2.up * 0.2f, towards,fetchDistance,~LayerMask.GetMask("Player"));
+        RaycastHit2D backFecth = Physics2D.Raycast(backOrigin + Vector2.up * 0.2f, towards * -1, fetchDistance, ~LayerMask.GetMask("Player"));
+        if(towardsFetch)
         {
-            Transform hitTransform = hit.transform;
-            if(hitTransform.gameObject.CompareTag("Fetchable"))
+            return TryFetch(towardsFetch);
+        }
+        else if(backFecth)
+        {
+            return TryFetch(backFecth);
+        }
+        return null;
+    }
+
+    Transform TryFetch(RaycastHit2D hit)
+    {
+        Transform hitTransform = hit.transform;
+        if(hitTransform.gameObject.CompareTag("Fetchable"))
+        {
+            var bounds = hit.collider.bounds;
+            Vector3 fetchPos = new Vector3(transform.position.x,(bounds.max.y - bounds.min.y)/2 + _raycastOrigins.topLeft.y);
+            hitTransform.position = fetchPos;
+            hitTransform.parent = transform;
+            hitTransform.gameObject.layer = 9;
+
+            boxFetched = hitTransform.GetComponent<BoxCollider2D>();
+            if (boxFetched != null)
             {
-                var bounds = hit.collider.bounds;
-                Vector3 fetchPos = new Vector3(transform.position.x,(bounds.max.y - bounds.min.y)/2 + _raycastOrigins.topLeft.y);
-                hitTransform.position = fetchPos;
-                hitTransform.parent = transform;
-                hitTransform.gameObject.layer = 2;
                 return hitTransform;
             }
-            return null;
+            else
+            {
+                circleFetched = hitTransform.GetComponent<CircleCollider2D>();
+            }
+            return hitTransform;
         }
+        return null;
+    }
 
-        public void ThrowThings(Transform things)
-        {
-            things.parent = null;
-            things.gameObject.layer = platformMask>>1;
-            //给个力扔出去
-        }
+    public void ThrowThings(Transform things)
+    {
+        things.parent = null;
+        boxFetched = null;
+        circleFetched = null;
+
+        things.gameObject.layer = platformMask>>1;
+        //给个力扔出去
+    }
 
 	#endregion
 

@@ -256,6 +256,7 @@ public class DemoScene : MonoBehaviour
         {
             var smoothedMovementFactor = _controller.isGrounded ? groundDamping : inAirDamping; // how fast do we change direction?
             _velocity.x = Mathf.Lerp(_velocity.x, normalizedHorizontalSpeed * runSpeed, Time.deltaTime * smoothedMovementFactor);
+            _velocity.x = Mathf.Abs(_velocity.x) < 0.01f? 0 :_velocity.x;
         }
 
         if (readyDash)
