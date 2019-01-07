@@ -304,6 +304,11 @@ public class DemoScene : MonoBehaviour
         dashRestTime--;
         dashState = true;
         _velocity = dashDirection * normalDash.dashSpeed;
+        if (dashDirection.magnitude != 1)
+        {
+            _velocity *= Mathf.Sin(Mathf.PI / 4);
+        }
+        
         currentDash = normalDash;
         Dash();
     }
@@ -372,7 +377,6 @@ public class DemoScene : MonoBehaviour
 
     public void BeginSuperDashState(int dirMark)
     {
-        Debug.Log("haha");
         Vector2 dashDir = Vector2.zero;
         switch(dirMark)
         {
@@ -386,6 +390,10 @@ public class DemoScene : MonoBehaviour
         pauseState = false;
         dashState = true;
         _velocity = dashDir * superDash.dashSpeed;
+        if(dashDir.magnitude != 1)
+        {
+            _velocity *= Mathf.Sin(Mathf.PI / 4);
+        }
         currentDash = superDash;
 
         if(rightArrow.gameObject.activeSelf)
@@ -428,6 +436,14 @@ public class DemoScene : MonoBehaviour
         else if (dashDirection == new Vector2(-1, -1))
         {
             rotate = Quaternion.Euler(0, 0, 135);
+        }
+        else if(dashDirection == Vector2.up)
+        {
+            rotate = Quaternion.Euler(0, 0, 0);
+        }
+        else if(dashDirection == Vector2.down)
+        {
+            rotate = Quaternion.Euler(0, 0, -180);
         }
         FreezeBullet bullet = Instantiate(bulletPrefab, transform.position, rotate).GetComponent<FreezeBullet>();
         bullet.Init(dashDirection);
